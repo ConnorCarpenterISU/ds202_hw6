@@ -1,0 +1,77 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Top dogs
+
+In this homework, you will try to reproduce the fantastic infographic for [top dogs](https://informationisbeautiful.net/visualizations/best-in-show-whats-the-top-data-dog/), originally produced by David McCandless. The raw data can be found [here](https://docs.google.com/spreadsheets/d/1l_HfF5EaN-QgnLc2UYdCc7L2CVrk0p3VdGB1godOyhk/edit#gid=10). You can download this file by File -- Download As -- Microsoft Excel (.xlsx).
+
+**Submission instructions**: Create a folder named `ds202_hw6`, and name the RMarkDown file including your solutions `hw6.Rmd` under this folder. For the submission, create a GitHub repository named `ds202_hw6` under your GitHub account, and push both `hw6.Rmd` and the knitted `hw6.html` before the deadline. I will assume you use the same GitHub username as for your HW5 submission. The latest version of your homework appearing on GitHub before the deadline is graded. *It is crucial to follow the exact folder structure and file names*, so that your homework can be reproduced and graded by an automated script. This homework is **due on April 22** before class.
+
+1. Import the data and clean appropriately. To read in the data, you can use `readxl::read_xlsx('fileNameHere', sheet='sheetNameHere')`. Required data are in the sheets `Best in show` and `Best in show full sheet`. Take extra care on the column names and the first few rows of the data frame after read in.
+
+```{r}
+BIS   <- readxl::read_xlsx('KIB.xlsx', sheet = 'Best in show')
+BISFS <- readxl::read_xlsx('KIB.xlsx', sheet = 'Best in show full sheet')
+
+BIS <- BIS[5:189,]
+names(BIS) <- as.character(unlist(BIS[1,]))
+BIS <- BIS[3:174,]
+BIS <- BIS[,colSums(is.na(BIS))<nrow(BIS)]
+
+names(BISFS) <- as.character(unlist(BISFS[2,]))
+BISFS <- BISFS[4:174,]
+colnames(BISFS)[1] <- "Breed"
+BISFS <- BISFS[,colSums(is.na(BISFS))<nrow(BISFS)]
+
+```
+
+
+2. Create a graphics similar to the  [top dogs](https://informationisbeautiful.net/visualizations/best-in-show-whats-the-top-data-dog/) figure. Your figure needs to display the following information with appropriate plotting elements:
+
+- breed of dog
+- type of dog (work, toy, etc.)
+- size of dog
+- data score 
+- popularity
+- intelligence of the dog
+- appropriate legends & explanation
+
+Hints and Notes:
+
+- The breed of dog can be displayed without the silhouttes (text only is fine)
+- Avoid (too much) overlaps!
+- Choose a good color scheme.
+- Your submission is supposed to be fully reproducible, i.e. the TA and I will 'knit' your submission in RStudio. 
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+names(BISFS)[3] <- "Score"
+names(BISFS)[4] <- "Total Popularity"
+names(BISFS)[5] <- "Partial Popularity"
+
+BISFS$Score <- as.numeric(BISFS$Score)
+BISFS$'Total Popularity' <- as.numeric(BISFS$'Total Popularity')
+BISFS <- BISFS[,1:61]
+
+
+test <- BISFS %>% select('Breed', 'Score', 'Total Popularity', 'size category', category, 'intelligence category')
+
+test <- na.omit(test)
+names(test)[2] <- "Score"
+names(test)[3] <- "Pop"
+names(test)[4] <- "Size"
+names(test)[5] <- "Category"
+names(test)[6] <- "Intelligence"
+
+test$Size <- factor(test$Size, levels = c('small', 'medium', 'large'))
+test$Intelligence <- as.factor(test$Intelligence)
+levels(test$Intelligence) <- list("dumb" = c("Lowest", "Average"), "clever" = c("Fair", "Above Average", "Brightest", "Excellent"))
+
+library(ggrepel)
+
+filter(test, !is.na(Intelligence)) %>% ggplot(aes(x = Score, y = -1 * Pop, color = Category, label = Breed)) + geom_count(aes(size = Size, shape = Intelligence)) + scale_shape_manual(values=c(1, 19)) + geom_text(check_overlap = TRUE, nudge_y = -1, size = 3) + labs(title = "Best in Show: The Ultimate Data Dog", x = "our data score", y = "popularity") + theme(axis.text = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.ticks = element_blank()) + geom_hline(yintercept = -77) + geom_vline(xintercept = 2.35) + annotate(geom = "text", x = 3.64, y = -1, label = "Hot Dogs!", hjust = 1) + annotate(geom = "text", x = 3.64, y = -160, label = "Overlooked Treasures", hjust = 1) + annotate(geom = "text", x = .99, y = -160, label = "The Rightly Ignored", hjust = 0) + annotate(geom = "text", x = .99, y = -1, label = "Inexplicably Overated", hjust = 0)
+```
